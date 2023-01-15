@@ -1,0 +1,159 @@
+/*
+ * TCPGlobal.cpp
+ *
+ *  Created on: Nov 14, 2015
+ *      Author: Debashis
+ */
+
+#include "IPGlobal.h"
+
+using namespace std;
+
+namespace GContainer
+{ GConfig *config; }
+
+namespace ipRange{
+	int totalIps;
+	_ipRange ipRange[100];
+}
+
+namespace ipProtocol{
+	std::unordered_map<uint8_t, std::string> ipProtocolMap;
+}
+
+namespace Stats
+{
+	int activeGxSessions[MAX_SESSION_MANAGER_SUPPORT] = {0,0,0,0};
+	int activeGySessions[MAX_SESSION_MANAGER_SUPPORT] = {0,0,0,0};
+	int activeS6aSessions[MAX_SESSION_MANAGER_SUPPORT] = {0,0,0,0};
+
+	int cleanupGxSessions[MAX_SESSION_MANAGER_SUPPORT] = {0,0,0,0};
+	int cleanupGySessions[MAX_SESSION_MANAGER_SUPPORT] = {0,0,0,0};
+	int cleanupS6aSessions[MAX_SESSION_MANAGER_SUPPORT] = {0,0,0,0};
+}
+
+namespace IPGlobal
+{
+	uint64_t	CURRENT_EPOCH_SEC 		= 0;
+	uint64_t	CURRENT_EPOCH_MICRO_SEC = 0;
+	uint16_t	CURRENT_SEC 			= 0;
+	uint16_t	CURRENT_HOUR 			= 0;
+	uint16_t	CURRENT_MIN 			= 0;
+	uint16_t	CURRENT_DAY 			= 0;
+	uint16_t	CURRENT_MONTH 			= 0;
+	uint16_t	CURRENT_YEAR			= 0;
+	uint128_t 	CURRENT_EPOCH_NANO_SEC 	= 0;
+	uint64_t 	CURRENT_EPOCH_MILI_SEC 	= 0;
+
+	BOOL		PROBE_RUNNING_STATUS = true;
+
+	BOOL	PKT_LISTENER_RUNNING_STATUS[MAX_INTERFACE_SUPPORT];
+	BOOL	PKT_LISTENER_INTF_MON_RUNNING_STATUS[MAX_INTERFACE_SUPPORT];
+	BOOL	PKT_LISTENER_DAYCHANGE_INDICATION[MAX_INTERFACE_SUPPORT];
+	BOOL	PKT_ROUTER_RUNNING_STATUS[MAX_INTERFACE_SUPPORT][MAX_ROUTER_PER_INTERFACE_SUPPORT];
+
+	BOOL	GX_SESSION_MANAGER_RUNNING_STATUS[MAX_SESSION_MANAGER_SUPPORT];
+	BOOL	GX_SESSION_MANAGER_SHUTDOWN_STATUS[MAX_SESSION_MANAGER_SUPPORT];
+
+	BOOL	GX_FLUSHER_RUNNING_STATUS = true;
+	BOOL	GX_XDR_FLUSHER_RUNNING_STATUS = true;
+	int		GX_FLUSHER_CPU_CORE = 0;
+	int 	GX_XDR_WRITE_CPU_CORE = 0;
+
+	int		GX_SESSION_MANAGER_INSTANCES = 0;
+	int		GX_SESSION_MANAGER_CPU_CORE[MAX_SESSION_MANAGER_SUPPORT] = {0,0,0,0};
+
+	int		GX_SESSION_CLEAN_UP_TIMEOUT_SEC = 120;
+	int 	GX_SESSION_CLEAN_UP_SCAN_FREQ_SEC = 15;
+
+	BOOL	GX_WRITE_XDR = false;
+	string  GX_FILE_PREFIX = "Gx";
+
+	BOOL	S6A_SESSION_MANAGER_RUNNING_STATUS[MAX_SESSION_MANAGER_SUPPORT];
+	BOOL	S6A_SESSION_MANAGER_SHUTDOWN_STATUS[MAX_SESSION_MANAGER_SUPPORT];
+
+	BOOL	S6A_FLUSHER_RUNNING_STATUS = true;
+	BOOL	S6A_XDR_FLUSHER_RUNNING_STATUS = true;
+	int		S6A_FLUSHER_CPU_CORE = 0;
+	int 	S6A_XDR_WRITE_CPU_CORE = 0;
+
+	int		S6A_SESSION_MANAGER_INSTANCES = 0;
+	int		S6A_SESSION_MANAGER_CPU_CORE[MAX_SESSION_MANAGER_SUPPORT] = {0,0,0,0};
+
+	int		S6A_SESSION_CLEAN_UP_TIMEOUT_SEC = 120;
+	int 	S6A_SESSION_CLEAN_UP_SCAN_FREQ_SEC = 15;
+
+	BOOL	S6A_WRITE_XDR = false;
+	string  S6A_FILE_PREFIX = "S6a";
+
+	BOOL	PROBE_STATS_RUNNING_STATUS = true;
+
+	int 	PROBE_ID;
+	bool 	PRINT_STATS = false;
+	int 	PRINT_STATS_FREQ_SEC = 1;
+	int		LOG_STATS_FREQ_SEC = 1;
+
+	int		NO_OF_NIC_INTERFACE = 0;
+	int		NO_OF_SOLAR_INTERFACE = 0;
+	int 	NO_OF_INTERFACES = 0;
+	int		NO_OF_ROUTERS = 0;
+
+	string 	ETHERNET_INTERFACES[MAX_INTERFACE_SUPPORT] 		= {"","","","","","","",""};
+	string 	SOLAR_INTERFACES[MAX_INTERFACE_SUPPORT] 		= {"","","","","","","",""};
+	string 	PNAME[MAX_INTERFACE_SUPPORT] = {"","","","","","","",""};
+
+	int 	ROUTER_PER_INTERFACE[MAX_INTERFACE_SUPPORT] 	= {0,0,0,0,0,0,0,0};
+	int		PKT_LISTENER_CPU_CORE[MAX_INTERFACE_SUPPORT]	= {0,0,0,0,0,0,0,0};
+	int		PKT_ROUTER_CPU_CORE[MAX_INTERFACE_SUPPORT][MAX_ROUTER_PER_INTERFACE_SUPPORT] = {
+																			{0,0,0,0,0,0,0,0},
+																			{0,0,0,0,0,0,0,0},
+																			{0,0,0,0,0,0,0,0},
+																			{0,0,0,0,0,0,0,0},
+																			{0,0,0,0,0,0,0,0},
+																			{0,0,0,0,0,0,0,0},
+																			{0,0,0,0,0,0,0,0},
+																			{0,0,0,0,0,0,0,0}};
+	int		TIME_INDEX = 10;
+	int 	PPS_PER_INTERFACE[MAX_INTERFACE_SUPPORT] 		= {500000,500000,500000,500000,500000,500000,500000,500000};
+	int		PPS_CAP_PERCENTAGE[MAX_INTERFACE_SUPPORT]		= {50,50,50,50,50,50,50,50};
+	int 	MAX_BW_INTERFACE[MAX_INTERFACE_SUPPORT]			= {0,0,0,0,0,0,0,0};
+
+	int		SOLARFLARE_HW_TIMESTAMP = 0;
+
+	bool	PACKET_PROCESSING = false;
+	bool	PROCESS_USER_AGENT	= false;
+
+	uint32_t PKT_RATE_INTF[MAX_INTERFACE_SUPPORT] = {0,0,0,0,0,0,0,0};
+	uint128_t PKTS_TOTAL_INTF[MAX_INTERFACE_SUPPORT] = {0,0,0,0,0,0,0,0};
+	uint64_t BW_MBPS_INTF[MAX_INTERFACE_SUPPORT] = {0,0,0,0,0,0,0,0};
+
+	bwData BW_MBPS_i_r[MAX_INTERFACE_SUPPORT][MAX_ROUTER_PER_INTERFACE_SUPPORT];
+
+
+
+
+	uint32_t 	currentDay;
+
+    uint64_t ip_discarded_large_packets_i[MAX_INTERFACE_SUPPORT];
+
+	string	ADMIN_PORT;
+	BOOL	ADMIN_FLAG = false;
+	BOOL	UPDATE_IP_RANGE = false;
+
+
+	int		MAX_PKT_LEN_PER_INTERFACE[MAX_INTERFACE_SUPPORT];
+}
+
+namespace PKTStore
+{
+	std::unordered_map<long, RawPkt*> pktRepository_i_r_t[MAX_INTERFACE_SUPPORT][MAX_ROUTER_PER_INTERFACE_SUPPORT][10];
+	long pktRepository_cnt_i_r_t[MAX_INTERFACE_SUPPORT][MAX_ROUTER_PER_INTERFACE_SUPPORT][10];
+	bool pktRepository_busy_i_r_t[MAX_INTERFACE_SUPPORT][MAX_ROUTER_PER_INTERFACE_SUPPORT][10];
+}
+
+
+namespace mapGxLock {
+	pthread_mutex_t lockCount = PTHREAD_MUTEX_INITIALIZER;
+	pthread_cond_t nonzero = PTHREAD_COND_INITIALIZER;
+	unsigned count;
+}
